@@ -37,6 +37,60 @@ Install the following libraries from the Arduino Library Manager:
 
 You can install the libraries using the Arduino IDE Library Manager (Tools > Manage Libraries...) except for `Spotify API Arduino` which you need to install manually, download the [library repository](https://github.com/witnessmenow/spotify-api-arduino.git) as a ZIP and install it as an external library (Sketch > Include Library > Add .ZIP Library...).
 
+### Spotify API Credentials
+
+To get your Spotify API credentials, follow these steps:
+
+1. Create a Spotify Developer Account:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Log in with your Spotify account or create one
+   - Accept the Terms of Service
+
+2. Create a new Application:
+   - Click "Create an App" 
+   - Fill in the App name and description
+   - Accept the Terms of Service
+   - Click "Create"
+
+3. Get Client ID and Client Secret:
+   - Once created, you'll see your Client ID on the dashboard
+   - Click "Show Client Secret" to reveal your Client Secret
+   - Save both values, you'll need them for `secrets.h`
+
+4. Get Refresh Token:
+   - Visit the [Spotify Auth Token Generator](https://spotify-refresh-token-generator.netlify.app/)
+   - Enter your Client ID and Client Secret
+   - Click "Get Refresh Token"
+   - Authorize the application when prompted
+   - Copy the generated Refresh Token
+
+5. Update `secrets.h`:
+   ```cpp
+   #define SPOTIFY_CLIENT_ID     "your_client_id_here"
+   #define SPOTIFY_CLIENT_SECRET "your_client_secret_here" 
+   #define SPOTIFY_REFRESH_TOKEN "your_refresh_token_here"
+   ```
+
+### Weather API Credentials
+
+To get your OpenWeatherMap API key, follow these steps:
+
+1. Create an OpenWeatherMap Account:
+   - Go to [OpenWeatherMap](https://openweathermap.org/)
+   - Click "Sign Up" and create a free account
+   - Verify your email address
+
+2. Get your API Key:
+   - Log in to your account
+   - Go to your profile menu (top right) and click "My API Keys"
+   - You'll find your default API key there
+   - Or generate a new key by entering a name and clicking "Generate"
+
+3. Update `secrets.h`:
+   ```cpp
+   #define WEATHER_API_KEY "your_api_key_here"
+   ```
+
 ## 🔧 How to Compile
 
 1. Install all required libraries as described above
