@@ -30,10 +30,10 @@ This project displays current Spotify playback information and weather data on a
 ### Arduino Libraries
 Install the following libraries from the Arduino Library Manager:
 
-- [`ArduinoJson 6.21.x`](https://arduinojson.org/v6/doc/installation/)
-- [`Spotify API Arduino`](https://github.com/witnessmenow/spotify-api-arduino.git)
-- [`Adafruit GFX Library 1.10.9+`](https://github.com/adafruit/Adafruit-GFX-Library)
-- [`Adafruit SH110X 2.1.10+`](https://github.com/adafruit/Adafruit_SH110X.git)
+- Spotify API Arduino [(repo)](https://github.com/witnessmenow/spotify-api-arduino.git)
+- Adafruit GFX Library - 1.10.9+ [(repo)](https://github.com/adafruit/Adafruit-GFX-Library)
+- Adafruit SH110X - 2.1.10+ [(repo)](https://github.com/adafruit/Adafruit_SH110X.git)
+- ArduinoJson - 6.21.x [(docs)](https://arduinojson.org/v6/doc/installation/)
 
 You can install the libraries using the Arduino IDE Library Manager (Tools > Manage Libraries...) except for `Spotify API Arduino` which you need to install manually, download the [library repository](https://github.com/witnessmenow/spotify-api-arduino.git) as a ZIP and install it as an external library (Sketch > Include Library > Add .ZIP Library...).
 
@@ -43,8 +43,8 @@ You can install the libraries using the Arduino IDE Library Manager (Tools > Man
 
 2. In Arduino IDE:
    - Select your board:
-     - For ESP8266: Tools > Board > ESP8266 Boards > NodeMCU 1.0
-     - For ESP32: Tools > Board > ESP32 Arduino > ESP32 Dev Module
+     - For ESP8266: Tools > Board > ESP8266 Boards > [Your ESP Board]
+     - For ESP32: Tools > Board > ESP32 Arduino > [Your ESP Board]
 
 3. Create the required configuration files:
    - Update `secrets.h` with your WiFi, Spotify and Weather API credentials
