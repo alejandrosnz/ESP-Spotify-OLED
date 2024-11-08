@@ -2,6 +2,9 @@
 
 This project displays current Spotify playback information and weather data on an OLED display using an ESP8266 or ESP32.
 
+![Spotify OLED Display](images\esp-spotify-oled.png)
+
+
 ## 🎵 Features
 
 - Shows current Spotify track information including:
