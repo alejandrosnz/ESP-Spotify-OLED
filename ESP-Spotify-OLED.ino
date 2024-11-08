@@ -1,3 +1,6 @@
+#include "secrets.h"
+#include "config.h"
+
 // ------------------
 // Standard Libraries
 // ------------------
@@ -50,44 +53,12 @@ struct WeatherData {
 };
 WeatherData weather_data;
 
-// -----------------------------
-// Wifi and Spotify Client setup
-// -----------------------------
-
-#define WIFI_SSID "WIFI_SSID"
-#define WIFI_PASS "WIFI_PASS"
-
-#define SPOTIFY_CLIENT_ID     "SPOTIFY_CLIENT_ID"
-#define SPOTIFY_CLIENT_SECRET "SPOTIFY_CLIENT_SECRET"
-#define SPOTIFY_REFRESH_TOKEN "SPOTIFY_REFRESH_TOKEN"
-#define SPOTIFY_MARKET        "ES"
-#define SPOTIFY_API_DELAY     1 * 1000  // 1 second
-
-#define HTTP_INSECURE 1
-
-// Local time setup
-
-#define TIME_NTP_SERVER    "europe.pool.ntp.org"
-#define TIME_GMT_OFFSET    0     // UCT+1
-#define TIME_SUMMER_OFFSET 3600  // UCT+2 in summer
-
-// Weather setup
-
-#define WEATHER_API_KEY   "WEATHER_API_KEY"
-#define WEATHER_QUERY     "Madrid,ES,city"
-#define WEATHER_API_DELAY 5 * 60 * 1000 // 5 minutes
-
-// Variables setup
 
 WiFiClientSecure client;
 SpotifyArduino spotify(client, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN);
 CurrentlyPlaying currentlyPlaying;
 unsigned long spotify_latest_request = 0;
 unsigned long weather_latest_request = 0;
-
-// Additional config
-#define MAX_CHAR_TITLE_PER_LINE 11
-#define MAX_CHAR_ARTIST_PER_LINE 21
 
 void setup() {
   Serial.begin(115200);
