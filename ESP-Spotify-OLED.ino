@@ -68,7 +68,7 @@ unsigned long spotify_latest_request = 0;
 unsigned long weather_latest_request = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(SERIAL_BAUDRATE);
 
   // OLED setup
   Wire.begin(OLED_SDA, OLED_SCL);
@@ -102,7 +102,7 @@ void setup() {
   client.setInsecure();
 #endif
 
-  // Time configuration
+  // Time sync
   waitForSync();
   timezone.setLocation(TIME_ZONE);
 
@@ -260,10 +260,10 @@ void getWeatherData() {
   String server = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=" + String(WEATHER_QUERY) + "&APPID=" + String(WEATHER_API_KEY);
   String json_array = GET_Request(server.c_str());
 
-  StaticJsonDocument<32> filter;
-  filter["weather"] = true;
-  filter["main"] = true;
-  StaticJsonDocument<384> doc;
+  StaticJsonDocument<80> filter;
+  filter["weather"][0]["icon"] = true;
+  filter["main"]["temp"] = true;
+  StaticJsonDocument<128> doc;
 
   DeserializationError error = deserializeJson(doc, json_array, DeserializationOption::Filter(filter));
 

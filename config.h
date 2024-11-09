@@ -25,4 +25,7 @@
 // HTTP configuration
 #define HTTP_INSECURE 1
 
+// Serial configuration
+#define SERIAL_BAUDRATE 115200
+
 #endif 
