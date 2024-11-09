@@ -105,6 +105,7 @@ To get your OpenWeatherMap API key, follow these steps:
 
 3. Create the required configuration files:
    - Update `secrets.h` with your WiFi, Spotify and Weather API credentials
+   - Update `config.h` with your Spotify country market code, weather location and GMT time offset
 
 4. Verify library dependencies:
    ```cpp
