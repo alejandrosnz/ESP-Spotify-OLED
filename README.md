@@ -34,9 +34,10 @@ This project displays current Spotify playback information and weather data on a
 Install the following libraries from the Arduino Library Manager:
 
 - Spotify API Arduino [(repo)](https://github.com/witnessmenow/spotify-api-arduino.git)
-- Adafruit GFX Library - 1.10.9+ [(repo)](https://github.com/adafruit/Adafruit-GFX-Library)
-- Adafruit SH110X - 2.1.10+ [(repo)](https://github.com/adafruit/Adafruit_SH110X.git)
+- Adafruit GFX Library - 1.10.9 [(repo)](https://github.com/adafruit/Adafruit-GFX-Library)
+- Adafruit SH110X - 2.1.10 [(repo)](https://github.com/adafruit/Adafruit_SH110X.git)
 - ArduinoJson - 6.21.x [(docs)](https://arduinojson.org/v6/doc/installation/)
+- EzTime - 0.8.3 [(repo)](https://github.com/ropg/ezTime)
 
 You can install the libraries using the Arduino IDE Library Manager (Tools > Manage Libraries...) except for `Spotify API Arduino` which you need to install manually, download the [library repository](https://github.com/witnessmenow/spotify-api-arduino.git) as a ZIP and install it as an external library (Sketch > Include Library > Add .ZIP Library...).
 
@@ -105,13 +106,14 @@ To get your OpenWeatherMap API key, follow these steps:
 
 3. Create the required configuration files:
    - Update `secrets.h` with your WiFi, Spotify and Weather API credentials
-   - Update `config.h` with your Spotify country market code, weather location and GMT time offset
+   - Update `config.h` with your Spotify country market code, Timezone code and weather location
 
 4. Verify library dependencies:
    ```cpp
    #include <SpotifyArduino.h>
    #include <SpotifyArduinoCert.h>
    #include <Adafruit_SH110X.h>
+   #include <ezTime.h>
    ```
    If you see any errors, double-check that all libraries are properly installed
 

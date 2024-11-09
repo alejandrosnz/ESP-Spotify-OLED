@@ -14,7 +14,6 @@
 #endif
 
 #include <ArduinoJson.h>
-#include "time.h"
 
 // ----------------------------
 // Spotify API lib
@@ -41,6 +40,14 @@
 #define OLED_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SH1106G display = Adafruit_SH1106G(OLED_WIDTH, OLED_HEIGHT, &Wire, OLED_RESET);
+
+// ----------------------------
+// EzTime lib
+// https://github.com/ropg/ezTime
+// ----------------------------
+
+#include <ezTime.h>
+Timezone timezone;
 
 // ----------------------------
 // Wheather icons and data
@@ -96,7 +103,8 @@ void setup() {
 #endif
 
   // Time configuration
-  configTime(TIME_GMT_OFFSET, TIME_SUMMER_OFFSET, TIME_NTP_SERVER);
+  waitForSync();
+  timezone.setLocation(TIME_ZONE);
 
   // Get Spotify auth token
   Serial.println("Refreshing Access Tokens");
@@ -225,25 +233,18 @@ void replaceSpecialCharacters(String &str) {
 
 
 void printLocalTime() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  char buffer[10];
-
   // Format and print current time
-  strftime(buffer, sizeof(buffer), "%H:%M", &timeinfo);
   display.clearDisplay();
   display.setCursor(20, 5);
   display.setTextSize(3);
-  display.print(buffer);
+  display.print(timezone.dateTime("H:i"));
 
   // Print weather data
   Serial.println("WEATHER DATA: " + String(weather_data.temp) + "C - " + weather_data.icon_code);
   display.drawBitmap(23, 32, getWeatherIcon(weather_data.icon_code), WI_ICON_WIDTH, WI_ICON_HEIGHT, SH110X_WHITE);
   display.setTextSize(2);
   display.setCursor(60, 40);
+  char buffer[10];
   snprintf(buffer, sizeof(buffer), "%d", (int)round(weather_data.temp));
   display.print(buffer);
   display.drawBitmap(60 + 2 + strlen(buffer) * 12, 40, degree_bmp, 8, 10, SH110X_WHITE);
