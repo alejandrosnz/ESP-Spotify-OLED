@@ -130,6 +130,10 @@ To get your OpenWeatherMap API key, follow these steps:
 
 8. Monitor the upload process in the IDE's console
 
+## 📦 3D Model
+
+You can find the 3D model used for this project [here](https://www.printables.com/model/1098419-terminal-for-ssd1106-13-oled-remix).
+
 ## 🛠️ Troubleshooting
 
 If you encounter issues while using the ESP8266/ESP32 Spotify OLED Display, here are some common problems and their solutions:
