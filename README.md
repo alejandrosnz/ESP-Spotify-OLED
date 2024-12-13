@@ -64,6 +64,10 @@ To get your Spotify API credentials, follow these steps:
 4. Get Refresh Token:
    - Visit the [Spotify Auth Token Generator](https://spotify-refresh-token-generator.netlify.app/)
    - Enter your Client ID and Client Secret
+   - Leave the Redirect URI as-is
+   - Select the following Scopes:
+      - user-read-currently-playing
+      - user-read-playback-state
    - Click "Get Refresh Token"
    - Authorize the application when prompted
    - Copy the generated Refresh Token
@@ -125,3 +129,32 @@ To get your OpenWeatherMap API key, follow these steps:
 7. Click the "Upload" button or use Sketch > Upload
 
 8. Monitor the upload process in the IDE's console
+
+## 🛠️ Troubleshooting
+
+If you encounter issues while using the ESP8266/ESP32 Spotify OLED Display, here are some common problems and their solutions:
+
+1. **OLED Display Not Turning On**:
+   - Ensure that the connections (SDA, SCL, VCC, GND) are correct and secure.
+   - Check if the OLED display is powered properly.
+
+2. **Spotify API Credentials Not Working**:
+   - Double-check that you have entered the correct Client ID, Client Secret, and Refresh Token in `secrets.h`.
+   - Ensure that the application has the necessary permissions and scopes enabled.
+
+3. **Weather Data Not Displaying**:
+   - Verify that your OpenWeatherMap API key is correct and active.
+   - Check your internet connection; the ESP8266/ESP32 needs to be connected to WiFi to fetch weather data.
+
+4. **Compilation Errors**:
+   - Make sure all required libraries are installed correctly.
+   - Check for any typos in your code or configuration files.
+
+5. **No Music Playing Information**:
+   - Ensure that the Spotify account is active and that the device is playing music.
+   - Verify that the correct scopes are set in the Spotify API settings.
+
+6. **Token too long error**:
+   - This error may occur if you have selected too many scopes when generating the Spotify refresh token.
+   - Re-generate the refresh token selecting only the required scopes (user-read-currently-playing and user-read-playback-state)
+   - The generated refresh token should be around 130-140 chars long
