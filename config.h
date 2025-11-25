@@ -10,6 +10,16 @@
 #define WEATHER_QUERY      "Madrid,ES,city" // Weather location https://openweathermap.org/current#name
 #define WEATHER_API_DELAY  5 * 60 * 1000    // 5 minutes delay between API calls
 
+// WiFiManager configuration
+#define WIFI_CONFIG_PORTAL_TIMEOUT  120  // Timeout in seconds for config portal
+#define WIFI_CONNECT_TIMEOUT        30   // Timeout in seconds for WiFi connection
+#define WIFI_AP_NAME_PREFIX         "ESP-Spotify-"  // AP name prefix
+#define WIFI_AP_PASSWORD            "spotify123"    // AP password (min 8 chars)
+
+// Reset button configuration
+#define RESET_BUTTON_PIN            D3   // GPIO pin for reset button (change as needed)
+#define RESET_BUTTON_HOLD_TIME      3000 // Hold button for 3 seconds to reset
+
 // Display configuration
 #define MAX_CHAR_TITLE_PER_LINE  11
 #define MAX_CHAR_ARTIST_PER_LINE 21
@@ -28,4 +38,4 @@
 // Serial configuration
 #define SERIAL_BAUDRATE 115200
 
-#endif 
+#endif
