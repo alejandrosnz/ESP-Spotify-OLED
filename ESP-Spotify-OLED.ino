@@ -13,6 +13,19 @@
 #include <WiFiClientSecure.h>
 #endif
 
+// WiFiManager for captive portal
+#include <ESP_WiFiManager.h>
+
+// Filesystem for storing config
+#if defined(ESP32)
+  #include <FS.h>
+  #include <SPIFFS.h>
+  #define FileFS SPIFFS
+#elif defined(ESP8266)
+  #include <LittleFS.h>
+  #define FileFS LittleFS
+#endif
+
 #include <ArduinoJson.h>
 
 // ----------------------------
@@ -54,15 +67,38 @@ Timezone timezone;
 // ----------------------------
 
 #include "weather_icons.h"
+#include "config_manager.h"
+
 struct WeatherData {
   float temp;
   char icon_code[5];
 };
 WeatherData weather_data;
 
+// WiFiManager instance
+ESP_WiFiManager wifiManager;
+
+// Custom parameters for timezone and weather
+char custom_timezone[50];
+char custom_weather_query[100];
+
+// Custom parameters for API credentials
+char custom_spotify_client_id[100];
+char custom_spotify_client_secret[100];
+char custom_spotify_refresh_token[200];
+char custom_weather_api_key[50];
+
+bool shouldSaveConfig = false;
+
+// Callback to notify when config should be saved
+void saveConfigCallback() {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 
 WiFiClientSecure client;
-SpotifyArduino spotify(client, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN);
+SpotifyArduino *spotify = nullptr;
 CurrentlyPlaying currentlyPlaying;
 unsigned long spotify_latest_request = 0;
 unsigned long weather_latest_request = 0;
@@ -76,21 +112,181 @@ void setup() {
   display.begin(OLED_I2C_ADDR, true);
   display.setTextColor(SH110X_WHITE);
   display.clearDisplay();
-  display.println("Connecting...");
+  display.println("Starting...");
   display.display();
 
-  // Connect to Wifi
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Setup reset button
+  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
+
+  // Check if reset button is pressed on boot
+  if (digitalRead(RESET_BUTTON_PIN) == LOW) {
+    Serial.println("Reset button pressed - waiting for hold time...");
+    display.clearDisplay();
+    display.println("Hold button to");
+    display.println("reset WiFi...");
+    display.display();
+    
+    unsigned long pressStart = millis();
+    while (digitalRead(RESET_BUTTON_PIN) == LOW) {
+      if (millis() - pressStart >= RESET_BUTTON_HOLD_TIME) {
+        Serial.println("Resetting WiFi settings...");
+        display.clearDisplay();
+        display.println("Resetting WiFi!");
+        display.display();
+        
+        // Reset WiFiManager settings and filesystem
+        ESP_WiFiManager wifiManager_temp;
+        wifiManager_temp.resetSettings();
+        FileFS.format();
+        
+        display.clearDisplay();
+        display.println("WiFi Reset!");
+        display.println("Restarting...");
+        display.display();
+        delay(2000);
+        ESP.restart();
+      }
+      delay(100);
+    }
+    Serial.println("Button released before hold time");
   }
-  Serial.print("Connected to WiFi! IP: ");
+
+  // Initialize filesystem
+  Serial.println("Mounting filesystem...");
+  display.clearDisplay();
+  display.println("Mounting FS...");
+  display.display();
+  
+  if (!FileFS.begin()) {
+    Serial.println("Failed to mount filesystem, formatting...");
+    FileFS.format();
+    FileFS.begin();
+  }
+
+  // Initialize API credentials with defaults from secrets.h
+  #ifdef SPOTIFY_CLIENT_ID
+    strcpy(custom_spotify_client_id, SPOTIFY_CLIENT_ID);
+  #else
+    custom_spotify_client_id[0] = '\0';
+  #endif
+  
+  #ifdef SPOTIFY_CLIENT_SECRET
+    strcpy(custom_spotify_client_secret, SPOTIFY_CLIENT_SECRET);
+  #else
+    custom_spotify_client_secret[0] = '\0';
+  #endif
+  
+  #ifdef SPOTIFY_REFRESH_TOKEN
+    strcpy(custom_spotify_refresh_token, SPOTIFY_REFRESH_TOKEN);
+  #else
+    custom_spotify_refresh_token[0] = '\0';
+  #endif
+  
+  #ifdef WEATHER_API_KEY
+    strcpy(custom_weather_api_key, WEATHER_API_KEY);
+  #else
+    custom_weather_api_key[0] = '\0';
+  #endif
+
+  // Load custom configuration (will override defaults if config file exists)
+  loadConfig(custom_timezone, custom_weather_query, custom_spotify_client_id, custom_spotify_client_secret, custom_spotify_refresh_token, custom_weather_api_key);
+
+  // WiFiManager setup
+  WiFi.mode(WIFI_STA);
+  wifiManager.setDebugOutput(true);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
+  wifiManager.setConfigPortalTimeout(WIFI_CONFIG_PORTAL_TIMEOUT);
+
+  // Add custom parameters for timezone and weather
+  ESP_WMParameter custom_tz("timezone", "Timezone (e.g. Europe/Madrid)", custom_timezone, 50);
+  ESP_WMParameter custom_weather("weather", "Weather Location (e.g. Madrid,ES,city)", custom_weather_query, 100);
+  
+  // Add custom parameters for API credentials
+  ESP_WMParameter custom_spot_id("spotify_id", "Spotify Client ID", custom_spotify_client_id, 100);
+  ESP_WMParameter custom_spot_secret("spotify_secret", "Spotify Client Secret", custom_spotify_client_secret, 100);
+  ESP_WMParameter custom_spot_token("spotify_token", "Spotify Refresh Token", custom_spotify_refresh_token, 200);
+  ESP_WMParameter custom_weather_key("weather_key", "Weather API Key", custom_weather_api_key, 50);
+  
+  wifiManager.addParameter(&custom_tz);
+  wifiManager.addParameter(&custom_weather);
+  wifiManager.addParameter(&custom_spot_id);
+  wifiManager.addParameter(&custom_spot_secret);
+  wifiManager.addParameter(&custom_spot_token);
+  wifiManager.addParameter(&custom_weather_key);
+
+  // Display connecting message
+  display.clearDisplay();
+  display.println("Connecting WiFi...");
+  display.display();
+
+  // Generate unique AP name
+  String apName = String(WIFI_AP_NAME_PREFIX) + String(ESP_getChipId(), HEX);
+
+  // Check if we have saved WiFi credentials by checking if SSID is stored
+  String savedSSID = WiFi.SSID();
+  bool hasCredentials = (savedSSID != "" && savedSSID.length() > 0);
+  
+  if (!hasCredentials) {
+    // First time setup - force config portal
+    Serial.println("No saved WiFi credentials, starting config portal...");
+    display.clearDisplay();
+    display.println("WiFi Setup Mode");
+    display.println("Connect to:");
+    display.println(apName);
+    display.println("Pass: spotify123");
+    display.display();
+    
+    if (!wifiManager.startConfigPortal(apName.c_str(), WIFI_AP_PASSWORD)) {
+      Serial.println("Failed to connect and hit timeout");
+      display.clearDisplay();
+      display.println("WiFi Config");
+      display.println("Timeout!");
+      display.println("Restarting...");
+      display.display();
+      delay(3000);
+      ESP.restart();
+    }
+  } else {
+    // Try to connect to saved WiFi
+    Serial.println("Attempting WiFi connection...");
+    if (!wifiManager.autoConnect(apName.c_str(), WIFI_AP_PASSWORD)) {
+      Serial.println("Failed to connect and hit timeout");
+      display.clearDisplay();
+      display.println("WiFi Config");
+      display.println("Timeout!");
+      display.println("Restarting...");
+      display.display();
+      delay(3000);
+      ESP.restart();
+    }
+  }
+
+  // Connected successfully
+  Serial.println("Connected to WiFi!");
+  Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
   display.clearDisplay();
-  display.println("Connected to WiFi!");
+  display.println("WiFi Connected!");
+  display.print("IP: ");
+  display.println(WiFi.localIP());
   display.display();
+  delay(2000);
+
+  // Save custom parameters if needed
+  if (shouldSaveConfig) {
+    Serial.println("Saving custom config...");
+    strcpy(custom_timezone, custom_tz.getValue());
+    strcpy(custom_weather_query, custom_weather.getValue());
+    strcpy(custom_spotify_client_id, custom_spot_id.getValue());
+    strcpy(custom_spotify_client_secret, custom_spot_secret.getValue());
+    strcpy(custom_spotify_refresh_token, custom_spot_token.getValue());
+    strcpy(custom_weather_api_key, custom_weather_key.getValue());
+    saveConfig(custom_timezone, custom_weather_query, custom_spotify_client_id, custom_spotify_client_secret, custom_spotify_refresh_token, custom_weather_api_key);
+  }
+
+  // Initialize Spotify client with configured credentials
+  spotify = new SpotifyArduino(client, custom_spotify_client_id, custom_spotify_client_secret, custom_spotify_refresh_token);
 
   // Client Secure configuration
 #if defined(ESP8266)
@@ -104,11 +300,11 @@ void setup() {
 
   // Time sync
   waitForSync();
-  timezone.setLocation(TIME_ZONE);
+  timezone.setLocation(custom_timezone);
 
   // Get Spotify auth token
   Serial.println("Refreshing Access Tokens");
-  if (!spotify.refreshAccessToken()) {
+  if (!spotify->refreshAccessToken()) {
     Serial.println("Failed to get access tokens");
   }
 
@@ -189,7 +385,7 @@ void printCurrentlyPlayingToDisplay() {
 
 void loop() {
   if (millis() > spotify_latest_request + SPOTIFY_API_DELAY) {
-    int status = spotify.getCurrentlyPlaying(updateSpotifyData, SPOTIFY_MARKET);
+    int status = spotify->getCurrentlyPlaying(updateSpotifyData, SPOTIFY_MARKET);
 
     if (status == 200) {
       printCurrentlyPlayingToDisplay();
@@ -257,7 +453,7 @@ void printLocalTime() {
 }
 
 void getWeatherData() {
-  String server = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=" + String(WEATHER_QUERY) + "&APPID=" + String(WEATHER_API_KEY);
+  String server = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=" + String(custom_weather_query) + "&APPID=" + String(WEATHER_API_KEY);
   String json_array = GET_Request(server.c_str());
 
   StaticJsonDocument<80> filter;
