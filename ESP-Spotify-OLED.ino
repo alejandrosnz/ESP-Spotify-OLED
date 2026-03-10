@@ -66,6 +66,11 @@ SpotifyArduino spotify(client, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY
 CurrentlyPlaying currentlyPlaying;
 unsigned long spotify_latest_request = 0;
 unsigned long weather_latest_request = 0;
+unsigned long clock_last_update = 0;
+bool isSpotifyPlaying = false;
+bool spotifyReady = false;        // Only true after a successful token refresh
+unsigned long token_retry_time = 0;
+const unsigned long TOKEN_RETRY_DELAY = 30 * 1000; // Retry token refresh every 30s
 
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
@@ -101,15 +106,21 @@ void setup() {
 #if defined(HTTP_INSECURE)
   client.setInsecure();
 #endif
+  client.setTimeout(15); // 15s max per connection — prevents indefinite hangs
+  // Reduce SSL I/O buffers from default 16KB to save heap on ESP8266.
+  // Spotify's API works fine with 512-byte buffers.
+  client.setBufferSizes(512, 512);
 
   // Time sync
   waitForSync();
   timezone.setLocation(TIME_ZONE);
 
-  // Get Spotify auth token
+  // Get Spotify auth token (non-fatal: device will keep showing clock if it fails)
   Serial.println("Refreshing Access Tokens");
-  if (!spotify.refreshAccessToken()) {
-    Serial.println("Failed to get access tokens");
+  spotifyReady = spotify.refreshAccessToken();
+  if (!spotifyReady) {
+    Serial.println("Failed to get access tokens — will retry in loop");
+    token_retry_time = millis(); // schedule first retry immediately
   }
 
   // Get first weather data
@@ -188,23 +199,57 @@ void printCurrentlyPlayingToDisplay() {
 }
 
 void loop() {
-  if (millis() > spotify_latest_request + SPOTIFY_API_DELAY) {
+  events(); // Let ezTime handle periodic NTP re-sync
+
+  // --- Spotify token refresh retry (when not ready) ---
+  if (!spotifyReady && millis() - token_retry_time >= TOKEN_RETRY_DELAY) {
+    Serial.println("Retrying Spotify token refresh...");
+    spotifyReady = spotify.refreshAccessToken();
+    if (spotifyReady) {
+      Serial.println("Token refresh succeeded");
+      spotify_latest_request = 0; // Trigger Spotify poll immediately
+    } else {
+      Serial.println("Token refresh failed, will retry later");
+    }
+    token_retry_time = millis();
+  }
+
+  // --- Spotify poll (only when token is valid) ---
+  if (spotifyReady && millis() - spotify_latest_request >= SPOTIFY_API_DELAY) {
     int status = spotify.getCurrentlyPlaying(updateSpotifyData, SPOTIFY_MARKET);
 
     if (status == 200) {
+      isSpotifyPlaying = true;
       printCurrentlyPlayingToDisplay();
       Serial.println("Successfully got currently playing");
-    } else if (status == 204) {
-      Serial.println("Doesn't seem to be anything playing");
-      printLocalTime();
     } else {
-      Serial.print("ERROR! Status " + status);
+      isSpotifyPlaying = false;
+      if (status == 204) {
+        Serial.println("Doesn't seem to be anything playing");
+      } else if (status == 401) {
+        // Token expired — force a refresh on next retry cycle
+        Serial.println("401 Unauthorized — token expired, will refresh");
+        spotifyReady = false;
+        token_retry_time = millis();
+      } else {
+        Serial.print("ERROR! Status: ");
+        Serial.println(status);
+      }
     }
     spotify_latest_request = millis();
   }
 
-  if (millis() > weather_latest_request + WEATHER_API_DELAY) {
+  // --- Weather poll ---
+  if (millis() - weather_latest_request >= WEATHER_API_DELAY) {
     getWeatherData();
+  }
+
+  // --- Clock display update (every second when Spotify is not playing) ---
+  // This runs independently of the Spotify poll, so the clock never freezes
+  // even if Spotify API is slow, erroring, or rate-limiting.
+  if (!isSpotifyPlaying && millis() - clock_last_update >= CLOCK_UPDATE_DELAY) {
+    printLocalTime();
+    clock_last_update = millis();
   }
 }
 
@@ -263,7 +308,7 @@ void getWeatherData() {
   StaticJsonDocument<80> filter;
   filter["weather"][0]["icon"] = true;
   filter["main"]["temp"] = true;
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<256> doc;
 
   DeserializationError error = deserializeJson(doc, json_array, DeserializationOption::Filter(filter));
 
