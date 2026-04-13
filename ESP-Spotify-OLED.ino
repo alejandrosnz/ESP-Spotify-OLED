@@ -321,7 +321,17 @@ void getWeatherData() {
   JsonObject weather = doc["weather"][0];
   JsonObject main = doc["main"];
 
-  strcpy(weather_data.icon_code, weather["icon"]);
+  if (weather.isNull() || main.isNull()) {
+    Serial.println(F("Weather response missing expected fields"));
+    return;
+  }
+
+  const char* icon = weather["icon"];
+  if (!icon) {
+    Serial.println(F("Weather icon field is null"));
+    return;
+  }
+  strcpy(weather_data.icon_code, icon);
   weather_data.temp = main["temp"];
 
   weather_latest_request = millis();
